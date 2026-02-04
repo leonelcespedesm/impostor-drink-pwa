@@ -20,7 +20,7 @@ function App() {
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
-      <h1>Vite + React ANASHEEE</h1>
+      <h1>IDOOOO Vite + React ANASHEEE</h1>
       
       {/* PWA Test Status */}
       <div style={{ margin: '20px', padding: '10px', border: '1px solid #444', borderRadius: '8px' }}>
