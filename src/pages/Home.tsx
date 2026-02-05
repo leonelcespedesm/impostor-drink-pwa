@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { KeyboardEvent, ChangeEvent } from 'react'
 import { useGameStore } from '@/store/useGameStore'
-import { fetchCategories, type Category } from '@/services/categories'
+import { useCategories } from '@/hooks/useCategories'
+import { GAME_CONFIG } from '@/config/game'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,61 +13,45 @@ import { cn } from '@/lib/utils'
 import { Plus, X, Minus } from 'lucide-react'
 
 export const Home = () => {
-  const {
-    players,
-    selectedCategories,
-    impostorCount,
-    impostorHint,
-    gameInProgress,
-    addPlayer,
-    removePlayer,
-    setCategories,
-    setImpostorCount,
-    toggleHint,
-    startGame,
-    resetConfig,
-  } = useGameStore()
+  // Zustand selectors - prevents unnecessary re-renders
+  const players = useGameStore((state) => state.players)
+  const selectedCategories = useGameStore((state) => state.selectedCategories)
+  const impostorCount = useGameStore((state) => state.impostorCount)
+  const impostorHint = useGameStore((state) => state.impostorHint)
+  const gameInProgress = useGameStore((state) => state.gameInProgress)
+  
+  // Zustand actions
+  const addPlayer = useGameStore((state) => state.addPlayer)
+  const removePlayer = useGameStore((state) => state.removePlayer)
+  const setCategories = useGameStore((state) => state.setCategories)
+  const setImpostorCount = useGameStore((state) => state.setImpostorCount)
+  const toggleHint = useGameStore((state) => state.toggleHint)
+  const startGame = useGameStore((state) => state.startGame)
+  const resetConfig = useGameStore((state) => state.resetConfig)
 
+  // Local UI state
   const [playerInput, setPlayerInput] = useState('')
-  const [categories, setLoadedCategories] = useState<Category[]>([])
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [playerInputError, setPlayerInputError] = useState('')
 
-  // Load categories on mount
-  useEffect(() => {
-    const loadCategories = async () => {
-      setIsLoadingCategories(true)
-      const data = await fetchCategories()
-      setLoadedCategories(data)
-      setIsLoadingCategories(false)
-    }
-    loadCategories()
-  }, [])
+  // Custom hook for categories fetching
+  const { categories, isLoading: isLoadingCategories } = useCategories()
 
   const handlePlayerInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    if (value.length <= 30) {
+    if (value.length <= GAME_CONFIG.MAX_PLAYER_NAME_LENGTH) {
       setPlayerInput(value)
       setPlayerInputError('')
     }
   }
 
   const handleAddPlayer = () => {
-    const trimmedName = playerInput.trim()
-    
-    if (!trimmedName) {
-      setPlayerInputError('El nombre no puede estar vacío')
-      return
+    try {
+      addPlayer(playerInput)
+      setPlayerInput('')
+      setPlayerInputError('')
+    } catch (err) {
+      setPlayerInputError((err as Error).message)
     }
-
-    if (players.includes(trimmedName)) {
-      setPlayerInputError('Este jugador ya existe')
-      return
-    }
-
-    addPlayer(trimmedName)
-    setPlayerInput('')
-    setPlayerInputError('')
   }
 
   const handlePlayerInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -87,12 +72,22 @@ export const Home = () => {
 
   const handleImpostorCountChange = (delta: number) => {
     const newCount = impostorCount + delta
-    if (newCount >= 1 && newCount <= players.length - 1) {
+    if (newCount >= GAME_CONFIG.MIN_IMPOSTORS && newCount <= players.length - 1) {
       setImpostorCount(newCount)
     }
   }
 
-  const canStartGame = players.length >= 3 && selectedCategories.length > 0
+  const handleStartGame = () => {
+    try {
+      startGame()
+    } catch (err) {
+      // Could show a toast here
+      console.error((err as Error).message)
+    }
+  }
+
+  const canStartGame = players.length >= GAME_CONFIG.MIN_PLAYERS && selectedCategories.length >= GAME_CONFIG.MIN_CATEGORIES
+  const playersNeeded = Math.max(0, GAME_CONFIG.MIN_PLAYERS - players.length)
 
   // Game in progress view
   if (gameInProgress) {
@@ -135,19 +130,24 @@ export const Home = () => {
             <div className="flex gap-2">
               <div className="flex-1">
                 <Input
-                  placeholder="Nombre del jugador (máx. 30 chars)"
+                  placeholder={`Nombre del jugador (máx. ${GAME_CONFIG.MAX_PLAYER_NAME_LENGTH} chars)`}
                   value={playerInput}
                   onChange={handlePlayerInputChange}
                   onKeyDown={handlePlayerInputKeyDown}
-                  maxLength={30}
+                  maxLength={GAME_CONFIG.MAX_PLAYER_NAME_LENGTH}
                   className={cn(playerInputError && 'border-destructive')}
+                  aria-label="Nombre del jugador"
+                  aria-describedby={playerInputError ? 'player-input-error' : undefined}
                 />
                 {playerInputError && (
-                  <p className="text-xs text-destructive mt-1">{playerInputError}</p>
+                  <p id="player-input-error" className="text-xs text-destructive mt-1" role="alert">
+                    {playerInputError}
+                  </p>
                 )}
               </div>
               <Button
                 onClick={handleAddPlayer}
+                aria-label="Añadir jugador"
                 size="icon"
                 className="shrink-0 h-10 w-10"
               >
@@ -233,7 +233,7 @@ export const Home = () => {
               <div className="space-y-0.5">
                 <p className="text-sm font-medium">Cantidad de Impostores</p>
                 <p className="text-xs text-muted-foreground">
-                  Máximo: {Math.max(1, players.length - 1)}
+                  Máximo: {Math.max(GAME_CONFIG.MIN_IMPOSTORS, players.length - 1)}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -241,18 +241,22 @@ export const Home = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => handleImpostorCountChange(-1)}
-                  disabled={impostorCount <= 1}
+                  disabled={impostorCount <= GAME_CONFIG.MIN_IMPOSTORS}
                   className="h-10 w-10"
+                  aria-label="Reducir cantidad de impostores"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="text-2xl font-bold w-8 text-center">{impostorCount}</span>
+                <span className="text-2xl font-bold w-8 text-center" aria-live="polite">
+                  {impostorCount}
+                </span>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleImpostorCountChange(1)}
                   disabled={impostorCount >= players.length - 1 || players.length < 2}
                   className="h-10 w-10"
+                  aria-label="Aumentar cantidad de impostores"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -262,12 +266,17 @@ export const Home = () => {
             {/* Impostor Hint Switch */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium">Pista del Impostor</p>
-                <p className="text-xs text-muted-foreground">
+                <p id="hint-label" className="text-sm font-medium">Pista del Impostor</p>
+                <p id="hint-description" className="text-xs text-muted-foreground">
                   El impostor recibe una pista sobre la palabra
                 </p>
               </div>
-              <Switch checked={impostorHint} onCheckedChange={toggleHint} />
+              <Switch 
+                checked={impostorHint} 
+                onCheckedChange={toggleHint}
+                aria-labelledby="hint-label"
+                aria-describedby="hint-description"
+              />
             </div>
           </CardContent>
         </Card>
@@ -279,10 +288,10 @@ export const Home = () => {
               size="lg"
               className="w-full text-lg h-14"
               disabled={!canStartGame}
-              onClick={startGame}
+              onClick={handleStartGame}
             >
               {!canStartGame
-                ? `Necesitas ${3 - players.length} jugador(es) más y al menos 1 categoría`
+                ? `Necesitas ${playersNeeded} jugador(es) más y al menos 1 categoría`
                 : 'Iniciar Partida'}
             </Button>
           </CardFooter>

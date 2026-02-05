@@ -1,53 +1,53 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-
-interface GameState {
-  // State
-  players: string[]
-  selectedCategories: string[]
-  impostorCount: number
-  impostorHint: boolean
-  gameInProgress: boolean
-
-  // Actions
-  addPlayer: (playerName: string) => void
-  removePlayer: (playerName: string) => void
-  setCategories: (categories: string[]) => void
-  setImpostorCount: (count: number) => void
-  toggleHint: () => void
-  startGame: () => void
-  resetConfig: () => void
-}
+import { GAME_CONFIG, ERROR_MESSAGES } from '@/config/game'
+import type { GameStore } from '@/types/game'
 
 const initialState = {
-  players: [],
-  selectedCategories: [],
-  impostorCount: 1,
+  players: [] as string[],
+  selectedCategories: [] as string[],
+  impostorCount: GAME_CONFIG.MIN_IMPOSTORS,
   impostorHint: false,
   gameInProgress: false,
 }
 
-export const useGameStore = create<GameState>()(
+export const useGameStore = create<GameStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
-      addPlayer: (playerName) =>
-        set((state) => ({
-          players: [...state.players, playerName],
-        })),
+      addPlayer: (playerName: string) => {
+        const trimmed = playerName.trim()
+        
+        if (!trimmed) {
+          throw new Error(ERROR_MESSAGES.PLAYER_NAME_EMPTY)
+        }
+        
+        if (trimmed.length > GAME_CONFIG.MAX_PLAYER_NAME_LENGTH) {
+          throw new Error(ERROR_MESSAGES.PLAYER_NAME_TOO_LONG)
+        }
 
-      removePlayer: (playerName) =>
+        const { players } = get()
+        if (players.includes(trimmed)) {
+          throw new Error(ERROR_MESSAGES.PLAYER_ALREADY_EXISTS)
+        }
+
+        set((state) => ({
+          players: [...state.players, trimmed],
+        }))
+      },
+
+      removePlayer: (playerName: string) =>
         set((state) => ({
           players: state.players.filter((player) => player !== playerName),
         })),
 
-      setCategories: (categories) =>
+      setCategories: (categories: string[]) =>
         set(() => ({
           selectedCategories: categories,
         })),
 
-      setImpostorCount: (count) =>
+      setImpostorCount: (count: number) =>
         set(() => ({
           impostorCount: count,
         })),
@@ -57,10 +57,21 @@ export const useGameStore = create<GameState>()(
           impostorHint: !state.impostorHint,
         })),
 
-      startGame: () =>
+      startGame: () => {
+        const { players, selectedCategories } = get()
+        
+        if (players.length < GAME_CONFIG.MIN_PLAYERS) {
+          throw new Error(ERROR_MESSAGES.MIN_PLAYERS_NOT_MET)
+        }
+        
+        if (selectedCategories.length < GAME_CONFIG.MIN_CATEGORIES) {
+          throw new Error(ERROR_MESSAGES.MIN_CATEGORIES_NOT_MET)
+        }
+
         set(() => ({
           gameInProgress: true,
-        })),
+        }))
+      },
 
       resetConfig: () =>
         set(() => ({

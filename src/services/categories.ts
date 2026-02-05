@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from '@/config/game'
+
 export interface Category {
   id: string
   name: string
@@ -18,6 +20,6 @@ export const fetchCategories = async (): Promise<Category[]> => {
         { id: '4', name: 'Deportes', emoji: '⚽' },
         { id: '5', name: 'Música', emoji: '🎵' },
       ])
-    }, 500)
+    }, GAME_CONFIG.API_DELAY_MS)
   })
 }
