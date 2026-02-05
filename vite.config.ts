@@ -13,7 +13,7 @@ export default defineConfig({
       includeAssets: ['vite.svg'],
       manifest: {
         name: 'Impostor Drink',
-        short_name: 'Impostor',
+        short_name: 'Fucking impostor',
         description: 'Encuentra al impostor y bebe!',
         theme_color: '#242424',
         background_color: '#242424',
