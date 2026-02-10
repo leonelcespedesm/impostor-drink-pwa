@@ -238,22 +238,15 @@ Eres un experto en desarrollo frontend. Tus respuestas deben seguir estrictament
 
 ## 12. Accesibilidad (a11y)
 
-- **Semántica HTML:** Usa elementos semánticos (`<nav>`, `<main>`, `<article>`) en lugar de `<div>` genéricos.
 - **ARIA Labels:** Agrega `aria-label` a botones sin texto y `aria-describedby` para descripciones adicionales.
-- **Keyboard Navigation:** Asegúrate de que todos los elementos interactivos sean accesibles con teclado (`Tab`, `Enter`, `Escape`).
 - **Contraste:** Verifica que los colores cumplan con WCAG AA (mínimo contraste 4.5:1).
-
-## 13. Testing (Buenas Prácticas)
-
-- **Unit Tests:** Usa Vitest para probar hooks y utilidades puras.
-- **Component Tests:** Usa React Testing Library para probar componentes de forma aislada.
-- **Evita Snapshots:** Prioriza tests que verifiquen comportamiento sobre estructura (los snapshots se rompen fácilmente).
-- **Naming:** Sigue el patrón `describe('ComponentName', () => { it('should ...', () => {}) })`
+`
 
 ## 14. Lineas de codigo
 - **Longitud Máxima:** Mantén las líneas de código por debajo de 100 caracteres para mejorar la legibilidad.
 - **Funciones Pequeñas:** Divide funciones largas en funciones más pequeñas y reutilizables.
 - **Cantidad de lineas por archivo:** Mantén los archivos por debajo de 350 líneas. Si un archivo crece demasiado, considera dividirlo en componentes o módulos más pequeños.
+- **Modulardad de componentes:** Cada componente debe tener una única responsabilidad. Si un componente hace demasiadas cosas, divídelo en componentes más pequeños y específicos.
 ---
 
 ## Checklist antes de hacer Commit
